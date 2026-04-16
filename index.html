@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Foliare Studio — Interactive 3D Flipbooks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --gold: #C9A96E;
+    --gold-light: #E8D5A3;
+    --gold-dark: #8B6914;
+    --black: #060608;
+    --deep: #0D0D12;
+    --surface: #111118;
+    --surface2: #181820;
+    --text: #E8E4DC;
+    --muted: #888880;
+    --white: #F5F2EC;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Custom Cursor */
+  #cursor {
+    width: 12px; height: 12px;
+    background: var(--gold);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease;
+    mix-blend-mode: difference;
+  }
+  #cursor-trail {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(201,169,110,0.4);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.35s ease;
+  }
+
+  /* Navigation */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 1000;
+    padding: 24px 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, rgba(6,6,8,0.95) 0%, transparent 100%);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(201,169,110,0.08);
+  }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    text-decoration: none;
+  }
+  .logo span { font-style: italic; font-weight: 400; }
+  .nav-links { display: flex; gap: 40px; list-style: none; }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover { color: var(--gold); }
+  .nav-cta {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 10px 28px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+  }
+  .nav-cta:hover { background: var(--gold); color: var(--black); }
+
+  /* Hero */
+  #hero {
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 120px 60px 80px;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(201,169,110,0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 80% 20%, rgba(201,169,110,0.04) 0%, transparent 60%);
+  }
+
+  /* Hero Book Visual */
+  .book-scene {
+    position: absolute;
+    right: 5%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 320px;
+    height: 420px;
+    animation: floatScene 6s ease-in-out infinite;
+  }
+  @keyframes floatScene {
+    0%, 100% { transform: translateY(-50%) translateY(0px); }
+    50% { transform: translateY(-50%) translateY(-15px); }
+  }
+  .hero-book {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(160deg, #1a1a26 0%, #0d0d16 40%, #1e1e2a 100%);
+    border: 1px solid rgba(201,169,110,0.25);
+    border-radius: 6px 16px 16px 6px;
+    box-shadow:
+      0 40px 100px rgba(0,0,0,0.7),
+      0 0 50px rgba(201,169,110,0.06),
+      inset 0 0 40px rgba(201,169,110,0.02);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-book::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg,
+      transparent 0%,
+      rgba(201,169,110,0.03) 25%,
+      rgba(201,169,110,0.07) 50%,
+      rgba(201,169,110,0.03) 75%,
+      transparent 100%);
+    animation: shimmer 4s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  .hero-book::after {
+    content: '';
+    position: absolute;
+    right: -14px;
+    top: 4px;
+    bottom: 4px;
+    width: 16px;
+    background: linear-gradient(90deg, #e8e0d0 0%, #f5f0e8 50%, #e8e0d0 100%);
+    border-radius: 0 3px 3px 0;
+    box-shadow: inset -2px 0 6px rgba(0,0,0,0.3);
+  }
+  .hero-book-spine {
+    position: absolute;
+    left: -12px;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    background: linear-gradient(90deg, #0a0a10 0%, #131320 50%, #0a0a10 100%);
+    border-radius: 2px 0 0 2px;
+    border-left: 1px solid rgba(201,169,110,0.15);
+    border-top: 1px solid rgba(201,169,110,0.15);
+    border-bottom: 1px solid rgba(201,169,110,0.15);
+  }
+  .hero-book-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-style: italic;
+    color: var(--gold);
+    text-align: center;
+    letter-spacing: 0.08em;
+    line-height: 1.4;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 16px;
+  }
+  .hero-book-line {
+    width: 50px;
+    height: 1px;
+    background: var(--gold);
+    opacity: 0.4;
+    margin: 10px auto;
+  }
+  .hero-book-sub {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Floating particles */
+  .particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0;
+    animation: particleFly linear infinite;
+  }
+  @keyframes particleFly {
+    0% { opacity: 0; transform: translateY(100vh) translateX(0); }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.3; }
+    100% { opacity: 0; transform: translateY(-100px) translateX(calc(var(--drift) * 1px)); }
+  }
+
+  /* Grid lines */
+  .grid-overlay {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(201,169,110,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,169,110,0.03) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+  }
+
+  .hero-content {
+    position: relative; z-index: 10;
+    max-width: 680px;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid rgba(201,169,110,0.3);
+    padding: 8px 20px;
+    margin-bottom: 32px;
+    background: rgba(201,169,110,0.05);
+  }
+  .hero-badge-dot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+  .hero-badge span { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(52px, 7vw, 88px);
+    font-weight: 300;
+    line-height: 1.0;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+    color: var(--white);
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--gold);
+    display: block;
+  }
+  .hero-sub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+  .hero-desc {
+    font-size: 15px;
+    line-height: 1.8;
+    color: rgba(232,228,220,0.65);
+    max-width: 520px;
+    margin-bottom: 48px;
+  }
+  .hero-actions { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold) 0%, #B8892E 100%);
+    color: var(--black);
+    border: none;
+    padding: 18px 48px;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+  }
+  .btn-primary:hover::before { left: 100%; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 20px 60px rgba(201,169,110,0.35); }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(201,169,110,0.4);
+    color: var(--gold);
+    padding: 17px 40px;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-ghost:hover { background: rgba(201,169,110,0.08); border-color: var(--gold); transform: translateY(-2px); }
+
+  .hero-stats {
+    display: flex; gap: 48px; margin-top: 64px;
+    padding-top: 48px;
+    border-top: 1px solid rgba(201,169,110,0.12);
+  }
+  .stat-item { }
+  .stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 44px;
+    font-weight: 300;
+    color: var(--gold);
+    line-height: 1;
+    display: block;
+  }
+  .stat-label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-top: 6px; display: block; }
+
+  /* Section common */
+  section { padding: 120px 60px; position: relative; }
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before {
+    content: '';
+    width: 32px; height: 1px;
+    background: var(--gold);
+  }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(38px, 4.5vw, 62px);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--white);
+    max-width: 720px;
+  }
+  .section-title em { font-style: italic; color: var(--gold); }
+
+  /* Value Proposition Strip */
+  #value-strip {
+    padding: 0;
+    background: linear-gradient(90deg, rgba(201,169,110,0.08) 0%, rgba(201,169,110,0.04) 50%, rgba(201,169,110,0.08) 100%);
+    border-top: 1px solid rgba(201,169,110,0.15);
+    border-bottom: 1px solid rgba(201,169,110,0.15);
+    overflow: hidden;
+  }
+  .ticker-wrap {
+    display: flex;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+    will-change: transform;
+  }
+  .ticker-wrap:hover { animation-play-state: paused; }
+  .ticker-item {
+    display: flex; align-items: center; gap: 20px;
+    padding: 20px 48px;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .ticker-item span { color: var(--gold); font-size: 18px; }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* What You Get */
+  #value {
+    background: var(--deep);
+  }
+  .value-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+  }
+  .value-card {
+    background: var(--surface);
+    padding: 48px 40px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+    border: 1px solid transparent;
+  }
+  .value-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    transform: scaleX(0);
+    transition: transform 0.5s ease;
+  }
+  .value-card:hover { border-color: rgba(201,169,110,0.15); transform: translateY(-4px); }
+  .value-card:hover::before { transform: scaleX(1); }
+  .value-icon {
+    width: 56px; height: 56px;
+    border: 1px solid rgba(201,169,110,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    margin-bottom: 28px;
+    transition: all 0.3s ease;
+  }
+  .value-card:hover .value-icon { background: rgba(201,169,110,0.08); border-color: var(--gold); }
+  .value-card-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--white);
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  .value-card-desc {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .value-tag {
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid rgba(201,169,110,0.3);
+    padding: 4px 12px;
+  }
+
+  /* Transparency / Value for Money */
+  #transparent {
+    background: var(--black);
+    overflow: hidden;
+  }
+  .transparent-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 100px;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 64px;
+  }
+  .price-breakdown {
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.15);
+    padding: 48px 40px;
+    position: relative;
+  }
+  .price-breakdown::before {
+    content: 'What Your Investment Includes';
+    position: absolute;
+    top: -12px; left: 32px;
+    background: var(--surface);
+    padding: 0 12px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .price-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(201,169,110,0.08);
+    gap: 20px;
+  }
+  .price-line:last-child { border-bottom: none; }
+  .price-line-label { font-size: 14px; color: var(--text); line-height: 1.4; }
+  .price-line-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .price-line-tick { color: var(--gold); font-size: 18px; flex-shrink: 0; }
+
+  .transparent-text {}
+  .transparent-text p {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.6;
+    color: rgba(232,228,220,0.7);
+    margin-bottom: 24px;
+  }
+  .transparent-text p strong { color: var(--white); font-style: normal; font-weight: 400; }
+  .value-promise {
+    background: linear-gradient(135deg, rgba(201,169,110,0.1), rgba(201,169,110,0.04));
+    border-left: 3px solid var(--gold);
+    padding: 24px 28px;
+    margin-top: 32px;
+  }
+  .value-promise p { font-family: 'Inter', sans-serif; font-size: 14px; font-style: normal; color: var(--text); line-height: 1.7; margin: 0; }
+
+  /* =============================================
+     PORTFOLIO — Clean & Fixed
+     ============================================= */
+  #portfolio {
+    background: var(--deep);
+  }
+  .portfolio-filter {
+    display: flex; gap: 8px;
+    margin-top: 48px; margin-bottom: 48px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: transparent;
+    border: 1px solid rgba(201,169,110,0.2);
+    color: var(--muted);
+    padding: 8px 24px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+  }
+  .portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .portfolio-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.08);
+    cursor: pointer;
+    transition: all 0.4s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .portfolio-card:hover { border-color: rgba(201,169,110,0.3); transform: translateY(-4px); }
+
+  /* Portfolio Visual Area */
+  .portfolio-visual {
+    aspect-ratio: 16/10;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  /* Clean Book Cover Visual */
+  .book-cover-visual {
+    width: 140px;
+    height: 190px;
+    background: linear-gradient(160deg, #1a1a26 0%, #0d0d16 40%, #1e1e2a 100%);
+    border: 1px solid rgba(201,169,110,0.25);
+    border-radius: 4px 12px 12px 4px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 30px rgba(201,169,110,0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 18px;
+    position: relative;
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
+  }
+  .portfolio-card:hover .book-cover-visual {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 40px rgba(201,169,110,0.1);
+  }
+  .book-cover-visual::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg,
+      transparent 0%,
+      rgba(201,169,110,0.03) 30%,
+      rgba(201,169,110,0.06) 50%,
+      rgba(201,169,110,0.03) 70%,
+      transparent 100%);
+    border-radius: 4px 12px 12px 4px;
+  }
+  .book-cover-visual::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 3px;
+    bottom: 3px;
+    width: 10px;
+    background: linear-gradient(90deg, #e8e0d0 0%, #f5f0e8 50%, #e8e0d0 100%);
+    border-radius: 0 3px 3px 0;
+    box-shadow: inset -1px 0 6px rgba(0,0,0,0.25);
+  }
+  .book-cover-visual .cover-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px;
+    font-style: italic;
+    color: var(--gold);
+    text-align: center;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 10px;
+  }
+  .book-cover-visual .cover-title span {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 8px;
+    font-style: normal;
+  }
+  .book-cover-visual .cover-line {
+    width: 36px;
+    height: 1px;
+    background: var(--gold);
+    opacity: 0.4;
+    margin: 6px auto;
+    position: relative;
+    z-index: 1;
+  }
+  .book-cover-visual .cover-sub {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Color variations per category */
+  .portfolio-card[data-category="fashion"] .book-cover-visual {
+    background: linear-gradient(160deg, #2d1a4a 0%, #1a0f2e 100%);
+  }
+  .portfolio-card[data-category="real estate"] .book-cover-visual {
+    background: linear-gradient(160deg, #0d2418 0%, #051510 100%);
+  }
+  .portfolio-card[data-category="finance"] .book-cover-visual {
+    background: linear-gradient(160deg, #2a2010 0%, #1a1408 100%);
+  }
+  .portfolio-card[data-category="hospitality"] .book-cover-visual {
+    background: linear-gradient(160deg, #0a1428 0%, #060e1e 100%);
+  }
+  .portfolio-card[data-category="corporate"] .book-cover-visual {
+    background: linear-gradient(160deg, #2a1010 0%, #1a0808 100%);
+  }
+
+  /* Accent color variations */
+  .portfolio-card[data-category="real estate"] .cover-title,
+  .portfolio-card[data-category="real estate"] .cover-line {
+    color: #7EC8A0;
+    background: #7EC8A0;
+  }
+  .portfolio-card[data-category="hospitality"] .cover-title,
+  .portfolio-card[data-category="hospitality"] .cover-line {
+    color: #6EB8E8;
+    background: #6EB8E8;
+  }
+  .portfolio-card[data-category="corporate"] .cover-title,
+  .portfolio-card[data-category="corporate"] .cover-line {
+    color: #E87E7E;
+    background: #E87E7E;
+  }
+
+  /* Portfolio Overlay */
+  .portfolio-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(6,6,8,0.95) 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    display: flex;
+    align-items: flex-end;
+    padding: 32px;
+  }
+  .portfolio-card:hover .portfolio-overlay { opacity: 1; }
+  .portfolio-overlay-tag {
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 8px;
+  }
+  .portfolio-overlay-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 300; color: var(--white);
+  }
+
+  /* Portfolio Info Bar */
+  .portfolio-info {
+    padding: 24px 28px;
+    border-top: 1px solid rgba(201,169,110,0.08);
+  }
+  .portfolio-info-row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .portfolio-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; color: var(--white);
+  }
+  .portfolio-category {
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold);
+    margin-top: 4px;
+  }
+  .portfolio-arrow {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(201,169,110,0.3);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-size: 16px;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .portfolio-card:hover .portfolio-arrow { background: var(--gold); color: var(--black); }
+
+  /* Services */
+  #services {
+    background: var(--black);
+  }
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: rgba(201,169,110,0.08);
+    margin-top: 64px;
+    border: 1px solid rgba(201,169,110,0.08);
+  }
+  .service-item {
+    background: var(--black);
+    padding: 40px 32px;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .service-item::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 0;
+    background: linear-gradient(180deg, transparent, rgba(201,169,110,0.06));
+    transition: height 0.4s ease;
+  }
+  .service-item:hover { background: var(--surface); }
+  .service-item:hover::after { height: 100%; }
+  .service-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px; font-weight: 300;
+    color: rgba(201,169,110,0.15);
+    line-height: 1; margin-bottom: 20px;
+  }
+  .service-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 400;
+    color: var(--white); margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  .service-desc {
+    font-size: 13px; line-height: 1.7; color: var(--muted);
+  }
+
+  /* Process */
+  #process {
+    background: var(--deep);
+    overflow: hidden;
+  }
+  .process-steps {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    margin-top: 80px;
+    position: relative;
+  }
+  .process-steps::before {
+    content: '';
+    position: absolute;
+    top: 32px; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), var(--gold), transparent);
+    opacity: 0.2;
+  }
+  .process-step {
+    padding: 0 20px;
+    text-align: center;
+    position: relative;
+  }
+  .step-circle {
+    width: 64px; height: 64px;
+    border: 1px solid rgba(201,169,110,0.4);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 28px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px; font-weight: 300;
+    color: var(--gold);
+    background: var(--deep);
+    transition: all 0.3s;
+    position: relative; z-index: 1;
+  }
+  .process-step:hover .step-circle { background: var(--gold); color: var(--black); border-color: var(--gold); }
+  .step-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--white); margin-bottom: 10px; }
+  .step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* Testimonials */
+  #testimonials {
+    background: var(--black);
+    overflow: hidden;
+  }
+  .testimonials-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-top: 64px;
+  }
+  .testimonial-card {
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.1);
+    padding: 40px 36px;
+    position: relative;
+    transition: all 0.4s ease;
+  }
+  .testimonial-card:hover { border-color: rgba(201,169,110,0.3); transform: translateY(-4px); }
+  .testimonial-card::before {
+    content: '"';
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 120px;
+    color: var(--gold);
+    opacity: 0.08;
+    position: absolute;
+    top: -20px; left: 24px;
+    line-height: 1;
+  }
+  .testimonial-stars { color: var(--gold); font-size: 14px; margin-bottom: 20px; letter-spacing: 3px; }
+  .testimonial-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; font-style: italic;
+    color: rgba(232,228,220,0.8);
+    line-height: 1.7;
+    margin-bottom: 28px;
+  }
+  .testimonial-author { display: flex; align-items: center; gap: 14px; }
+  .author-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; color: var(--black);
+    flex-shrink: 0;
+  }
+  .author-name { font-size: 14px; color: var(--white); font-weight: 500; }
+  .author-role { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Pricing */
+  #pricing {
+    background: var(--deep);
+  }
+  .pricing-note {
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 64px;
+    align-items: start;
+  }
+  .pricing-card {
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.1);
+    padding: 48px 40px;
+    position: relative;
+    transition: all 0.4s ease;
+  }
+  .pricing-card.featured {
+    background: linear-gradient(160deg, #1a1a26 0%, #131320 100%);
+    border-color: var(--gold);
+    transform: scale(1.04);
+  }
+  .pricing-card:hover:not(.featured) { border-color: rgba(201,169,110,0.3); transform: translateY(-4px); }
+  .pricing-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: var(--gold);
+    color: var(--black);
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 20px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pricing-tier {
+    font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 16px;
+  }
+  .pricing-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px; font-weight: 300; color: var(--white);
+    margin-bottom: 8px;
+  }
+  .pricing-tagline { font-size: 14px; color: var(--muted); margin-bottom: 32px; line-height: 1.5; }
+  .pricing-divider { height: 1px; background: rgba(201,169,110,0.12); margin-bottom: 32px; }
+  .pricing-features { list-style: none; margin-bottom: 40px; }
+  .pricing-features li {
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 14px; color: var(--text);
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(201,169,110,0.06);
+  }
+  .pricing-features li:last-child { border-bottom: none; }
+  .pricing-features li::before { content: '✓'; color: var(--gold); flex-shrink: 0; font-weight: 600; }
+  .pricing-cta {
+    display: block; text-align: center;
+    padding: 16px;
+    font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+    font-family: 'Inter', sans-serif;
+    text-decoration: none;
+    transition: all 0.3s;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pricing-card:not(.featured) .pricing-cta {
+    border: 1px solid rgba(201,169,110,0.3);
+    color: var(--gold);
+  }
+  .pricing-card:not(.featured) .pricing-cta:hover { background: rgba(201,169,110,0.08); }
+  .pricing-card.featured .pricing-cta {
+    background: linear-gradient(135deg, var(--gold), #B8892E);
+    color: var(--black);
+    font-weight: 600;
+  }
+  .pricing-card.featured .pricing-cta:hover { box-shadow: 0 12px 40px rgba(201,169,110,0.4); }
+
+  /* Contact/CTA */
+  #contact {
+    background: var(--black);
+    text-align: center;
+    padding: 160px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  #contact::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(201,169,110,0.06), transparent);
+    pointer-events: none;
+  }
+  .contact-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(48px, 6vw, 88px);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--white);
+    max-width: 800px;
+    margin: 0 auto 16px;
+  }
+  .contact-title em { color: var(--gold); font-style: italic; }
+  .contact-sub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-style: italic;
+    color: var(--muted);
+    margin-bottom: 56px;
+    max-width: 500px;
+    margin-left: auto; margin-right: auto;
+  }
+  .contact-form {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    max-width: 680px; margin: 0 auto 24px;
+    text-align: left;
+  }
+  .contact-form input, .contact-form textarea, .contact-form select {
+    background: var(--surface);
+    border: 1px solid rgba(201,169,110,0.15);
+    color: var(--text);
+    padding: 16px 20px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.3s;
+    width: 100%;
+  }
+  .contact-form input:focus, .contact-form textarea:focus, .contact-form select:focus {
+    border-color: var(--gold);
+  }
+  .contact-form select option { background: var(--surface); }
+  .contact-form .full-width { grid-column: span 2; }
+  .contact-form textarea { resize: vertical; min-height: 120px; }
+  .contact-submit {
+    grid-column: span 2;
+    background: linear-gradient(135deg, var(--gold), #B8892E);
+    color: var(--black);
+    border: none;
+    padding: 20px;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .contact-submit:hover { box-shadow: 0 20px 60px rgba(201,169,110,0.4); transform: translateY(-2px); }
+  .contact-trust {
+    display: flex; gap: 32px; justify-content: center; align-items: center;
+    margin-top: 32px; flex-wrap: wrap;
+  }
+  .trust-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); letter-spacing: 0.1em;
+  }
+  .trust-item span { color: var(--gold); font-size: 16px; }
+
+  /* Footer */
+  footer {
+    padding: 48px 60px;
+    border-top: 1px solid rgba(201,169,110,0.1);
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--black);
+  }
+  .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 300; letter-spacing: 0.3em; color: var(--gold); }
+  .footer-copy { font-size: 12px; color: var(--muted); letter-spacing: 0.1em; }
+  .footer-links { display: flex; gap: 32px; }
+  .footer-links a { font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.1em; transition: color 0.3s; }
+  .footer-links a:hover { color: var(--gold); }
+
+  /* Scroll reveal */
+  .reveal { opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+  .reveal-delay-5 { transition-delay: 0.5s; }
+
+  /* Portfolio filter fade */
+  .portfolio-card { transition: all 0.4s ease, opacity 0.35s ease; }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .orb-1 { width: 400px; height: 400px; background: rgba(201,169,110,0.04); top: -100px; right: 10%; }
+  .orb-2 { width: 300px; height: 300px; background: rgba(201,169,110,0.03); bottom: 10%; left: 5%; }
+
+  /* ===================== MOBILE OPTIMISATION ===================== */
+
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px;
+    z-index: 1100;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .hamburger span {
+    display: block;
+    width: 24px; height: 1.5px;
+    background: var(--gold);
+    transition: all 0.35s ease;
+    transform-origin: center;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  .mobile-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,6,8,0.98);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transform: translateX(100%);
+    transition: transform 0.45s cubic-bezier(0.16,1,0.3,1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    overscroll-behavior: contain;
+  }
+  .mobile-overlay.open { transform: translateX(0); }
+  .mobile-overlay a {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px; font-weight: 300;
+    color: rgba(232,228,220,0.7);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    padding: 12px 0;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: color 0.3s, opacity 0.4s ease, transform 0.4s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-overlay.open a {
+    opacity: 1; transform: translateY(0);
+  }
+  .mobile-overlay.open a:nth-child(1) { transition-delay: 0.1s; }
+  .mobile-overlay.open a:nth-child(2) { transition-delay: 0.15s; }
+  .mobile-overlay.open a:nth-child(3) { transition-delay: 0.2s; }
+  .mobile-overlay.open a:nth-child(4) { transition-delay: 0.25s; }
+  .mobile-overlay.open a:nth-child(5) { transition-delay: 0.3s; }
+  .mobile-overlay.open a:nth-child(6) { transition-delay: 0.35s; }
+  .mobile-overlay a:hover { color: var(--gold); }
+  .mobile-overlay-cta {
+    margin-top: 20px;
+    background: var(--gold) !important;
+    color: var(--black) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 12px !important;
+    letter-spacing: 0.25em !important;
+    padding: 16px 40px !important;
+    font-weight: 700 !important;
+  }
+  .mobile-overlay-divider {
+    width: 40px; height: 1px;
+    background: rgba(201,169,110,0.3);
+    margin: 8px 0;
+    opacity: 0;
+    transition: opacity 0.4s ease 0.3s;
+  }
+  .mobile-overlay.open .mobile-overlay-divider { opacity: 1; }
+
+  @media (max-width: 1024px) {
+    nav { padding: 20px 30px; }
+    .nav-links { display: none; }
+    section { padding: 80px 30px; }
+    .hero-title { font-size: 52px; }
+    .book-scene { display: none; }
+    .value-grid, .services-grid, .testimonials-grid, .pricing-grid { grid-template-columns: 1fr; }
+    .process-steps { grid-template-columns: 1fr 1fr; gap: 40px; }
+    .process-steps::before { display: none; }
+    .portfolio-grid { grid-template-columns: 1fr; }
+    .transparent-inner { grid-template-columns: 1fr; gap: 48px; }
+    .contact-form { grid-template-columns: 1fr; }
+    .contact-form .full-width { grid-column: span 1; }
+    .contact-submit { grid-column: span 1; }
+    footer { flex-direction: column; gap: 20px; text-align: center; }
+    .pricing-card.featured { transform: none; }
+  }
+
+  @media (max-width: 900px) {
+    body { cursor: auto; }
+    #cursor, #cursor-trail { display: none; }
+    .hamburger { display: flex; }
+    .nav-links, .nav-cta { display: none; }
+    nav { padding: 18px 24px; }
+
+    #hero { padding: 100px 24px 60px; min-height: 100svh; text-align: center; }
+    .hero-content { max-width: 100%; }
+    .hero-badge { margin: 0 auto 24px; font-size: 10px; }
+    .hero-title { font-size: clamp(40px, 11vw, 64px); }
+    .hero-sub { font-size: 17px; }
+    .hero-desc { font-size: 14px; max-width: 100%; margin-bottom: 36px; }
+    .hero-actions { flex-direction: column; align-items: center; gap: 12px; }
+    .btn-primary, .btn-ghost { width: 100%; text-align: center; padding: 18px 24px; }
+    .hero-stats { gap: 28px; flex-wrap: wrap; justify-content: center; padding-top: 32px; margin-top: 40px; }
+    .stat-num { font-size: 36px; }
+    .book-scene { display: none; }
+
+    #value-strip { display: none; }
+
+    section { padding: 72px 24px; }
+
+    .value-grid { grid-template-columns: 1fr; gap: 2px; }
+    .value-card { padding: 32px 28px; }
+
+    .transparent-inner { grid-template-columns: 1fr; gap: 40px; margin-top: 40px; }
+    .price-breakdown { padding: 36px 24px; }
+    .price-line-label { font-size: 13px; }
+
+    .portfolio-filter { gap: 6px; }
+    .filter-btn { padding: 7px 16px; font-size: 10px; }
+    .portfolio-grid { grid-template-columns: 1fr; gap: 16px; }
+    .portfolio-visual { aspect-ratio: 4/3; padding: 30px; }
+    .book-cover-visual { width: 120px; height: 160px; padding: 20px 16px; }
+    .book-cover-visual .cover-title { font-size: 15px; }
+    .portfolio-overlay { opacity: 1; background: linear-gradient(180deg, transparent 30%, rgba(6,6,8,0.95) 100%); }
+
+    .services-grid { grid-template-columns: 1fr 1fr; }
+    .service-item { padding: 28px 20px; }
+    .service-num { font-size: 36px; margin-bottom: 12px; }
+    .service-name { font-size: 16px; }
+
+    .process-steps { grid-template-columns: 1fr; gap: 24px; }
+    .process-steps::before { display: none; }
+    .process-step { padding: 0 0; }
+    .step-circle { margin-bottom: 16px; }
+
+    .testimonials-grid { grid-template-columns: 1fr; gap: 16px; }
+    .testimonial-card { padding: 28px 24px; }
+    .testimonial-text { font-size: 16px; }
+
+    .pricing-grid { grid-template-columns: 1fr; gap: 16px; }
+    .pricing-card.featured { transform: none; }
+    .pricing-card { padding: 36px 28px; }
+
+    #contact { padding: 80px 24px 72px; }
+    .contact-title { font-size: clamp(36px, 10vw, 56px); }
+    .contact-sub { font-size: 16px; }
+    .contact-form { grid-template-columns: 1fr; gap: 12px; }
+    .contact-form .full-width { grid-column: span 1; }
+    .contact-submit { grid-column: span 1; padding: 18px; font-size: 11px; }
+    .contact-trust { gap: 20px; }
+    .trust-item { font-size: 11px; }
+
+    .section-title { font-size: clamp(30px, 8vw, 48px); }
+
+    footer { flex-direction: column; gap: 24px; text-align: center; padding: 40px 24px; }
+    .footer-links { justify-content: center; flex-wrap: wrap; gap: 20px; }
+  }
+
+  @media (max-width: 480px) {
+    nav { padding: 16px 20px; }
+    .logo { font-size: 20px; }
+    .hero-title { font-size: clamp(36px, 12vw, 52px); }
+    .hero-badge span { font-size: 9px; letter-spacing: 0.12em; }
+    .services-grid { grid-template-columns: 1fr; }
+    .stat-num { font-size: 32px; }
+    .section-title { font-size: clamp(28px, 9vw, 40px); }
+    .value-card { padding: 28px 20px; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-overlay" id="mobileOverlay">
+  <a href="#value" onclick="closeMobileMenu()">What You Get</a>
+  <div class="mobile-overlay-divider"></div>
+  <a href="#portfolio" onclick="closeMobileMenu()">Portfolio</a>
+  <a href="#services" onclick="closeMobileMenu()">Services</a>
+  <a href="#process" onclick="closeMobileMenu()">Process</a>
+  <a href="#pricing" onclick="closeMobileMenu()">Pricing</a>
+  <div class="mobile-overlay-divider"></div>
+  <a href="#contact" class="mobile-overlay-cta" onclick="closeMobileMenu()">Start a Project</a>
+</div>
+
+<div id="cursor"></div>
+<div id="cursor-trail"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">Foliare <span>Studio</span></a>
+  <ul class="nav-links">
+    <li><a href="#portfolio">Portfolio</a></li>
+    <li><a href="#value">What You Get</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#process">Process</a></li>
+  </ul>
+  <a href="#contact" class="nav-cta">Start a Project</a>
+  <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="grid-overlay"></div>
+  <div class="orb orb-1"></div>
+  <div class="particles" id="particles"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge reveal">
+      <div class="hero-badge-dot"></div>
+      <span>Interactive 3D Flipbooks — Crafted for Premium Brands</span>
+    </div>
+    <h1 class="hero-title reveal reveal-delay-1">
+      Your Brand,
+      <em>Experienced.</em>
+    </h1>
+    <p class="hero-sub reveal reveal-delay-2">Not just viewed — felt, remembered, shared.</p>
+    <p class="hero-desc reveal reveal-delay-3">
+      Foliare Studio transforms static documents into living, physics-based 3D editorial experiences — custom-engineered for fashion houses, real estate firms, investment funds, and every brand that refuses to be ordinary.
+    </p>
+    <div class="hero-actions reveal reveal-delay-4">
+      <a href="#contact" class="btn-primary">Begin Your Project</a>
+      <a href="#portfolio" class="btn-ghost">View Our Work</a>
+    </div>
+    <div class="hero-stats reveal reveal-delay-5">
+      <div class="stat-item">
+        <span class="stat-num">120+</span>
+        <span class="stat-label">Projects Delivered</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">18</span>
+        <span class="stat-label">Industries Served</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">100%</span>
+        <span class="stat-label">Custom. No Templates.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Book -->
+  <div class="book-scene">
+    <div class="hero-book">
+      <div class="hero-book-spine"></div>
+      <div class="hero-book-title">Maison<br>Aurore<br>S/S 2025</div>
+      <div class="hero-book-line"></div>
+      <div class="hero-book-sub">Lookbook — Edition 12</div>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE TICKER STRIP -->
+<div id="value-strip">
+  <div class="ticker-wrap" id="ticker">
+    <div class="ticker-item"><span>✦</span> Physics-Based Page Turn</div>
+    <div class="ticker-item"><span>✦</span> Embedded Video & Audio</div>
+    <div class="ticker-item"><span>✦</span> Mobile-First Responsive</div>
+    <div class="ticker-item"><span>✦</span> Globally Hosted Link</div>
+    <div class="ticker-item"><span>✦</span> Zero Templates — 100% Custom</div>
+    <div class="ticker-item"><span>✦</span> Lifetime Shareable URL</div>
+    <div class="ticker-item"><span>✦</span> Offline PDF Included</div>
+    <div class="ticker-item"><span>✦</span> Analytics Dashboard</div>
+    <div class="ticker-item"><span>✦</span> 48-Hr Response Guarantee</div>
+    <div class="ticker-item"><span>✦</span> Post-Launch Support</div>
+    <div class="ticker-item"><span>✦</span> Physics-Based Page Turn</div>
+    <div class="ticker-item"><span>✦</span> Embedded Video & Audio</div>
+    <div class="ticker-item"><span>✦</span> Mobile-First Responsive</div>
+    <div class="ticker-item"><span>✦</span> Globally Hosted Link</div>
+    <div class="ticker-item"><span>✦</span> Zero Templates — 100% Custom</div>
+    <div class="ticker-item"><span>✦</span> Lifetime Shareable URL</div>
+    <div class="ticker-item"><span>✦</span> Offline PDF Included</div>
+    <div class="ticker-item"><span>✦</span> Analytics Dashboard</div>
+    <div class="ticker-item"><span>✦</span> 48-Hr Response Guarantee</div>
+    <div class="ticker-item"><span>✦</span> Post-Launch Support</div>
+  </div>
+</div>
+
+<!-- WHAT YOU GET -->
+<section id="value">
+  <div class="orb orb-2"></div>
+  <div class="section-label reveal">What Makes Every Rupee Worth It</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    You're Not Paying for a Flipbook.<br>
+    You're Paying for <em>Impact.</em>
+  </h2>
+  <div class="value-grid reveal reveal-delay-2">
+    <div class="value-card">
+      <div class="value-icon">📐</div>
+      <div class="value-card-title">Architecture First</div>
+      <p class="value-card-desc">Before a single pixel is designed, we blueprint your entire flipbook — flow, interactions, sections — and submit it for your approval. You control what gets built.</p>
+      <span class="value-tag">Transparency</span>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">🎨</div>
+      <div class="value-card-title">100% Original Design</div>
+      <p class="value-card-desc">Every page is designed from scratch in your brand language. No stock templates. No recycled assets. Your competitors cannot have what you have — it doesn't exist anywhere else.</p>
+      <span class="value-tag">Exclusivity</span>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">⚡</div>
+      <div class="value-card-title">Physics-Based 3D Engine</div>
+      <p class="value-card-desc">The page-turn is engineered — not a CSS trick. Real physics simulation, layered micro-animations, and hotspot interactions that make readers stay twice as long.</p>
+      <span class="value-tag">Technical Craft</span>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">🌐</div>
+      <div class="value-card-title">3 Formats, One Price</div>
+      <p class="value-card-desc">You receive a globally hosted shareable link, a website-embeddable module, AND a downloadable offline edition. Three deliverables, every project. No hidden upsells.</p>
+      <span class="value-tag">No Hidden Costs</span>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">📊</div>
+      <div class="value-card-title">Analytics Included</div>
+      <p class="value-card-desc">See exactly how many people opened your flipbook, which pages they spent the most time on, and where they dropped off. Data that helps your next campaign outperform this one.</p>
+      <span class="value-tag">Measurable ROI</span>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">🛡️</div>
+      <div class="value-card-title">Post-Launch Support</div>
+      <p class="value-card-desc">Every project includes a dedicated support window after handoff. Text corrections, link updates, minor revisions — handled without a new invoice. You're covered.</p>
+      <span class="value-tag">Peace of Mind</span>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSPARENT PRICING SECTION -->
+<section id="transparent">
+  <div class="section-label reveal">High Value for Money</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    We Show You Exactly<br>
+    <em>Where Every Rupee Goes.</em>
+  </h2>
+  <div class="transparent-inner">
+    <div class="price-breakdown reveal reveal-delay-2">
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">Discovery & Brand Strategy Session</div>
+          <div class="price-line-sub">Deep-dive into your brand DNA, audience, and goals</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">Full Structural Blueprint & Sign-Off</div>
+          <div class="price-line-sub">Complete architecture submitted before any design begins</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">100% Custom Page Design (No Templates)</div>
+          <div class="price-line-sub">Every page crafted in your brand's visual language</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">Physics-Based 3D Flipbook Engineering</div>
+          <div class="price-line-sub">Real page-turn physics, micro-animations, hotspots</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">Cross-Device QA Testing</div>
+          <div class="price-line-sub">Desktop, tablet, mobile — flawless on every screen</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">3 Delivery Formats + Analytics Access</div>
+          <div class="price-line-sub">Hosted link, embed code, offline PDF + reader data</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+      <div class="price-line">
+        <div>
+          <div class="price-line-label">Post-Launch Support Window</div>
+          <div class="price-line-sub">Revisions & updates after delivery — included</div>
+        </div>
+        <div class="price-line-tick">✓</div>
+      </div>
+    </div>
+    <div class="transparent-text reveal reveal-delay-3">
+      <p>We don't believe in <strong>pricing that confuses or intimidates.</strong> Every package is documented, every deliverable is listed, and nothing is added to your invoice without your explicit approval.</p>
+      <p>When you invest in Foliare Studio, you're investing in <strong>a commercial asset</strong> — a tool that converts browsers into buyers, prospects into investors, and readers into advocates.</p>
+      <p>Static PDFs lose <strong>70% of readers before page 3.</strong> Our interactive editions routinely achieve full read-throughs — because they engage the human instinct to turn a page.</p>
+      <div class="value-promise">
+        <p>💛 <strong>Our Promise:</strong> Before we begin, you will know every single deliverable, every timeline milestone, and every cost. No surprises. No inflated invoices. Just genuine craft delivered at a price that respects your investment.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PORTFOLIO — Fixed & Clean -->
+<section id="portfolio">
+  <div class="section-label reveal">Our Work</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    Projects That Made<br>
+    <em>Audiences Stop Scrolling.</em>
+  </h2>
+  <div class="portfolio-filter reveal reveal-delay-2">
+    <button class="filter-btn active">All</button>
+    <button class="filter-btn">Fashion</button>
+    <button class="filter-btn">Real Estate</button>
+    <button class="filter-btn">Finance</button>
+    <button class="filter-btn">Hospitality</button>
+    <button class="filter-btn">Corporate</button>
+  </div>
+  <div class="portfolio-grid reveal reveal-delay-3">
+
+    <!-- Card 1: Fashion -->
+    <div class="portfolio-card" data-category="fashion">
+      <div class="portfolio-visual">
+        <div class="book-cover-visual">
+          <div class="cover-title">Maison<br>Aurore<br><span>S/S 2025</span></div>
+          <div class="cover-line"></div>
+          <div class="cover-sub">Lookbook — Edition 12</div>
+        </div>
+      </div>
+      <div class="portfolio-overlay">
+        <div class="portfolio-overlay-content">
+          <div class="portfolio-overlay-tag">Fashion & Luxury</div>
+          <div class="portfolio-overlay-title">Maison Aurore — S/S 2025 Lookbook</div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <div class="portfolio-info-row">
+          <div>
+            <div class="portfolio-name">Maison Aurore</div>
+            <div class="portfolio-category">Fashion Lookbook · 48 Pages · Embedded Video</div>
+          </div>
+          <div class="portfolio-arrow">→</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Real Estate -->
+    <div class="portfolio-card" data-category="real estate">
+      <div class="portfolio-visual">
+        <div class="book-cover-visual">
+          <div class="cover-title">Emerald<br>Residences<br><span>Investor Deck</span></div>
+          <div class="cover-line"></div>
+          <div class="cover-sub">Luxury Properties</div>
+        </div>
+      </div>
+      <div class="portfolio-overlay">
+        <div class="portfolio-overlay-content">
+          <div class="portfolio-overlay-tag">Real Estate</div>
+          <div class="portfolio-overlay-title">Emerald Residences — Investor Brochure</div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <div class="portfolio-info-row">
+          <div>
+            <div class="portfolio-name">Emerald Residences</div>
+            <div class="portfolio-category">Real Estate · 360° Tours · Interactive Floor Plans</div>
+          </div>
+          <div class="portfolio-arrow">→</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Finance -->
+    <div class="portfolio-card" data-category="finance">
+      <div class="portfolio-visual">
+        <div class="book-cover-visual">
+          <div class="cover-title">Apex<br>Capital<br><span>Annual Report</span></div>
+          <div class="cover-line"></div>
+          <div class="cover-sub">2024 Edition</div>
+        </div>
+      </div>
+      <div class="portfolio-overlay">
+        <div class="portfolio-overlay-content">
+          <div class="portfolio-overlay-tag">Finance</div>
+          <div class="portfolio-overlay-title">Apex Capital — 2024 Annual Report</div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <div class="portfolio-info-row">
+          <div>
+            <div class="portfolio-name">Apex Capital</div>
+            <div class="portfolio-category">Investment Fund · ESG Report · 64 Pages</div>
+          </div>
+          <div class="portfolio-arrow">→</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Hospitality -->
+    <div class="portfolio-card" data-category="hospitality">
+      <div class="portfolio-visual">
+        <div class="book-cover-visual">
+          <div class="cover-title">Velora<br>Resort<br><span>Destination Guide</span></div>
+          <div class="cover-line"></div>
+          <div class="cover-sub">Luxury Travel</div>
+        </div>
+      </div>
+      <div class="portfolio-overlay">
+        <div class="portfolio-overlay-content">
+          <div class="portfolio-overlay-tag">Hospitality</div>
+          <div class="portfolio-overlay-title">Velora Resort — Digital Destination Guide</div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <div class="portfolio-info-row">
+          <div>
+            <div class="portfolio-name">Velora Resort & Spa</div>
+            <div class="portfolio-category">Hospitality · Drone Footage · Booking Integration</div>
+          </div>
+          <div class="portfolio-arrow">→</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: Corporate -->
+    <div class="portfolio-card" data-category="corporate">
+      <div class="portfolio-visual">
+        <div class="book-cover-visual">
+          <div class="cover-title">Kiran<br>Auto<br><span>Model Catalogue</span></div>
+          <div class="cover-line"></div>
+          <div class="cover-sub">Automotive Excellence</div>
+        </div>
+      </div>
+      <div class="portfolio-overlay">
+        <div class="portfolio-overlay-content">
+          <div class="portfolio-overlay-tag">Automotive</div>
+          <div class="portfolio-overlay-title">Kiran Auto — Interactive Model Catalogue</div>
+        </div>
+      </div>
+      <div class="portfolio-info">
+        <div class="portfolio-info-row">
+          <div>
+            <div class="portfolio-name">Kiran Automotive</div>
+            <div class="portfolio-category">Automotive · Shoppable SKUs · Spec Sheets</div>
+          </div>
+          <div class="portfolio-arrow">→</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="section-label reveal">What We Build</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    Eight Disciplines.<br>
+    <em>One Standard of Excellence.</em>
+  </h2>
+  <div class="services-grid reveal reveal-delay-2">
+    <div class="service-item">
+      <div class="service-num">01</div>
+      <div class="service-name">Fashion & Lifestyle Lookbooks</div>
+      <p class="service-desc">Seasonal campaigns, collection reveals, beauty & FMCG narratives with embedded video and hotspot links.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">02</div>
+      <div class="service-name">Real Estate Brochures</div>
+      <p class="service-desc">Luxury property decks with 360° tours, interactive floor plans, clickable amenity maps.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">03</div>
+      <div class="service-name">Finance & Investor Reports</div>
+      <p class="service-desc">Annual reports, ESG publications, fund prospectuses — commanding, readable, navigable.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">04</div>
+      <div class="service-name">B2B Product Catalogues</div>
+      <p class="service-desc">Shoppable catalogues with SKU tagging, spec integration, and embedded order request forms.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">05</div>
+      <div class="service-name">Corporate Communications</div>
+      <p class="service-desc">Brand books, onboarding handbooks, leadership reports — experiences your team actually engages with.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">06</div>
+      <div class="service-name">Events & Launches</div>
+      <p class="service-desc">Interactive programmes for runways, conferences, award ceremonies with RSVP & countdown integration.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">07</div>
+      <div class="service-name">Hospitality & Travel</div>
+      <p class="service-desc">Destination flipbooks for hotels, resorts, and agencies with drone footage and direct booking integrations.</p>
+    </div>
+    <div class="service-item">
+      <div class="service-num">08</div>
+      <div class="service-name">Education & Institutional</div>
+      <p class="service-desc">Admissions magazines, alumni publications, research summaries for universities and institutions.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section id="process">
+  <div class="section-label reveal">How It Works</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    Five Steps. Zero<br>
+    <em>Surprises.</em>
+  </h2>
+  <div class="process-steps reveal reveal-delay-2">
+    <div class="process-step">
+      <div class="step-circle">01</div>
+      <div class="step-title">Discovery Briefing</div>
+      <p class="step-desc">We learn your brand DNA, audience, and the specific outcomes you need. Everything stays confidential.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">02</div>
+      <div class="step-title">Blueprint & Sign-Off</div>
+      <p class="step-desc">Full structural map of your flipbook submitted for approval. Nothing is built without your green light.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">03</div>
+      <div class="step-title">Custom Design</div>
+      <p class="step-desc">Every page designed from scratch in your brand's visual language. No templates. All original.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">04</div>
+      <div class="step-title">3D Engineering</div>
+      <p class="step-desc">Physics-based page turn, micro-animations, hotspots, and cross-device QA — all tested before handoff.</p>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">05</div>
+      <div class="step-title">Launch & Support</div>
+      <p class="step-desc">Hosted link, embed code, offline PDF — delivered within agreed timeline, with post-launch support included.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div class="section-label reveal">Client Stories</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    They Invested.<br>
+    <em>Here's What Happened.</em>
+  </h2>
+  <div class="testimonials-grid reveal reveal-delay-2">
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-text">"Our investors spent 4x longer on our annual report this year. Three of them called to compliment the presentation before we'd even followed up. The flipbook did the selling for us."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">R</div>
+        <div>
+          <div class="author-name">Rahul Mehta</div>
+          <div class="author-role">Managing Director, Apex Capital</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-text">"I was skeptical about the price initially. Then I saw the blueprint they sent before starting — every detail mapped. When the final flipbook landed, I understood exactly what I'd paid for. Worth every rupee."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">S</div>
+        <div>
+          <div class="author-name">Sophia Laurent</div>
+          <div class="author-role">Creative Director, Maison Aurore</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-text">"Our property brochure gets more compliments than the properties themselves. Buyers ask how they can share it — we give them the link. Conversions went up 38% the quarter we launched it."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">A</div>
+        <div>
+          <div class="author-name">Arjun Singhania</div>
+          <div class="author-role">Head of Sales, Emerald Residences</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-label reveal">Investment</div>
+  <h2 class="section-title reveal reveal-delay-1">
+    Transparent Pricing.<br>
+    <em>Genuine Value for Money.</em>
+  </h2>
+  <p class="pricing-note reveal reveal-delay-2">Every package includes all deliverables listed. No hidden fees. No surprise add-ons. Your investment is fixed from day one.</p>
+  <div class="pricing-grid reveal reveal-delay-3">
+    <div class="pricing-card">
+      <div class="pricing-tier">Foundation</div>
+      <div class="pricing-name">Essential</div>
+      <div class="pricing-tagline">For emerging brands launching their first premium interactive experience.</div>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li>Up to 20 custom-designed pages</li>
+        <li>Physics-based 3D flipbook engine</li>
+        <li>Hosted shareable link (lifetime)</li>
+        <li>Mobile & desktop optimised</li>
+        <li>Downloadable offline PDF</li>
+        <li>Basic analytics dashboard</li>
+        <li>14-day post-launch support</li>
+      </ul>
+      <a href="#contact" class="pricing-cta">Get Started →</a>
+    </div>
+    <div class="pricing-card featured">
+      <div class="pricing-badge">Most Chosen</div>
+      <div class="pricing-tier">Signature</div>
+      <div class="pricing-name">Premier</div>
+      <div class="pricing-tagline">For established brands that need to impress investors, buyers, or a premium audience.</div>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li>Up to 48 custom-designed pages</li>
+        <li>Embedded video, audio & hotspots</li>
+        <li>Interactive floor plans or product maps</li>
+        <li>Website embed module included</li>
+        <li>Hosted link + offline PDF + embed code</li>
+        <li>Full analytics with heatmaps</li>
+        <li>30-day post-launch support</li>
+        <li>2 rounds of post-delivery revisions</li>
+      </ul>
+      <a href="#contact" class="pricing-cta">Begin Your Project →</a>
+    </div>
+    <div class="pricing-card">
+      <div class="pricing-tier">Bespoke</div>
+      <div class="pricing-name">Maison</div>
+      <div class="pricing-tagline">For premium organizations requiring unlimited scope, multi-edition series, or enterprise delivery.</div>
+      <div class="pricing-divider"></div>
+      <ul class="pricing-features">
+        <li>Unlimited pages & sections</li>
+        <li>Full media integration (video, 360°, maps)</li>
+        <li>Custom booking or form integrations</li>
+        <li>Multi-language editions available</li>
+        <li>All 3 formats + white-label option</li>
+        <li>Priority turnaround & dedicated manager</li>
+        <li>Ongoing support retainer available</li>
+        <li>Annual report series pricing available</li>
+      </ul>
+      <a href="#contact" class="pricing-cta">Enquire Now →</a>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-label" style="justify-content:center; margin-bottom: 32px;">
+    <span style="margin-left:0;">Start Your Project</span>
+  </div>
+  <h2 class="contact-title reveal">
+    Let's Build Something<br>
+    <em>Worth Experiencing.</em>
+  </h2>
+  <p class="contact-sub reveal reveal-delay-1">We respond within 48 hours. All enquiries are kept strictly confidential.</p>
+  <form class="contact-form reveal reveal-delay-2" onsubmit="return false;">
+    <input type="text" placeholder="Your Name *" required />
+    <input type="email" placeholder="Email Address *" required />
+    <input type="text" placeholder="Company / Brand Name" />
+    <select>
+      <option value="" disabled selected>Industry / Project Type</option>
+      <option>Fashion & Lifestyle</option>
+      <option>Real Estate</option>
+      <option>Finance & Investment</option>
+      <option>Hospitality & Travel</option>
+      <option>Automotive</option>
+      <option>Corporate / Internal</option>
+      <option>Education & Institutional</option>
+      <option>Events & Launches</option>
+      <option>Other</option>
+    </select>
+    <textarea class="full-width" placeholder="Tell us about your project — what you need, when you need it, and what success looks like for you."></textarea>
+    <button type="submit" class="contact-submit">Send Enquiry — We'll Respond Within 48 Hours</button>
+  </form>
+  <div class="contact-trust reveal reveal-delay-3">
+    <div class="trust-item"><span>🔒</span> Strictly Confidential</div>
+    <div class="trust-item"><span>⏱️</span> 48-Hr Response</div>
+    <div class="trust-item"><span>✦</span> No Commitment Required</div>
+    <div class="trust-item"><span>📄</span> Detailed Proposal Provided</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Foliare Studio</div>
+  <div class="footer-links">
+    <a href="#portfolio">Portfolio</a>
+    <a href="#services">Services</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <div class="footer-copy">© 2025–2026 Foliare Studio. All rights reserved.</div>
+</footer>
+
+<script>
+// ── Detect touch/mobile ──────────────────────────────────────────────────────
+const isTouchDevice = () => window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+// ── Custom Cursor (desktop only) ─────────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const trail  = document.getElementById('cursor-trail');
+
+if (!isTouchDevice()) {
+  let mouseX = 0, mouseY = 0, trailX = 0, trailY = 0;
+  let rafId, lastMouseX = -1, lastMouseY = -1;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    cursor.style.left = (mouseX - 6) + 'px';
+    cursor.style.top  = (mouseY - 6) + 'px';
+  });
+
+  function animateTrail() {
+    if (Math.abs(mouseX - lastMouseX) > 0.1 || Math.abs(mouseY - lastMouseY) > 0.1) {
+      trailX += (mouseX - trailX) * 0.15;
+      trailY += (mouseY - trailY) * 0.15;
+      trail.style.left = (trailX - 18) + 'px';
+      trail.style.top  = (trailY - 18) + 'px';
+      lastMouseX = mouseX;
+      lastMouseY = mouseY;
+    }
+    rafId = requestAnimationFrame(animateTrail);
+  }
+  animateTrail();
+
+  document.querySelectorAll('a, button, .portfolio-card, .value-card, .service-item').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.transform = 'scale(2)';
+      trail.style.transform  = 'scale(1.5)';
+      trail.style.borderColor = 'rgba(201,169,110,0.7)';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.transform = 'scale(1)';
+      trail.style.transform  = 'scale(1)';
+      trail.style.borderColor = 'rgba(201,169,110,0.4)';
+    });
+  });
+} else {
+  if (cursor) cursor.style.display = 'none';
+  if (trail)  trail.style.display  = 'none';
+}
+
+// ── Particles (skip on mobile for performance) ───────────────────────────────
+if (!isTouchDevice()) {
+  const container = document.getElementById('particles');
+  if (container) {
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDuration = (8 + Math.random() * 16) + 's';
+      p.style.animationDelay    = (Math.random() * 12) + 's';
+      p.style.setProperty('--drift', (Math.random() * 200 - 100));
+      p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+      container.appendChild(p);
+    }
+  }
+}
+
+// ── Scroll Reveal ─────────────────────────────────────────────────────────────
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (prefersReduced) {
+  document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+} else {
+  const reveals  = document.querySelectorAll('.reveal');
+  const revealOb = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealOb.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(el => revealOb.observe(el));
+}
+
+// ── Counter animation ─────────────────────────────────────────────────────────
+function animateCounters() {
+  document.querySelectorAll('.stat-num').forEach(el => {
+    const target = el.textContent.trim();
+    const num    = parseInt(target);
+    if (isNaN(num)) return;
+    const suffix = target.replace(/[0-9]/g, '');
+    let current  = 0;
+    const step   = num / 60;
+    const timer  = setInterval(() => {
+      current += step;
+      if (current >= num) { current = num; clearInterval(timer); }
+      el.textContent = Math.floor(current) + suffix;
+    }, 25);
+  });
+}
+const statsEl = document.querySelector('.hero-stats');
+if (statsEl) {
+  const statsOb = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) { animateCounters(); statsOb.disconnect(); }
+    });
+  }, { threshold: 0.4 });
+  statsOb.observe(statsEl);
+}
+
+// ── Portfolio filter ──────────────────────────────────────────────────────────
+const filterBtns = document.querySelectorAll('.filter-btn');
+const portfolioCards = document.querySelectorAll('.portfolio-card');
+
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', function () {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+
+    const filter = this.textContent.trim().toLowerCase();
+
+    portfolioCards.forEach(card => {
+      const cat = (card.getAttribute('data-category') || '').toLowerCase();
+      if (filter === 'all' || cat.includes(filter)) {
+        card.style.display = '';
+        card.style.opacity = '1';
+      } else {
+        card.style.opacity = '0';
+        setTimeout(() => {
+          if ((card.getAttribute('data-category') || '').toLowerCase().indexOf(filter) === -1
+              && document.querySelector('.filter-btn.active')?.textContent.trim().toLowerCase() !== 'all') {
+            card.style.display = 'none';
+          }
+        }, 350);
+      }
+    });
+  });
+});
+
+// ── Nav scroll effect ─────────────────────────────────────────────────────────
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 80) {
+    nav.style.background       = 'rgba(6,6,8,0.97)';
+    nav.style.borderBottomColor = 'rgba(201,169,110,0.15)';
+  } else {
+    nav.style.background       = '';
+    nav.style.borderBottomColor = '';
+  }
+}, { passive: true });
+
+// ── Mobile menu ───────────────────────────────────────────────────────────────
+function toggleMobileMenu() {
+  const overlay = document.getElementById('mobileOverlay');
+  const btn     = document.getElementById('hamburgerBtn');
+  overlay.classList.toggle('open');
+  btn.classList.toggle('open');
+  document.body.style.overflow = overlay.classList.contains('open') ? 'hidden' : '';
+}
+function closeMobileMenu() {
+  document.getElementById('mobileOverlay').classList.remove('open');
+  document.getElementById('hamburgerBtn').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileMenu(); });
+
+// ── Contact form ──────────────────────────────────────────────────────────────
+const contactForm = document.querySelector('.contact-form');
+const submitBtn   = document.querySelector('.contact-submit');
+if (contactForm && submitBtn) {
+  contactForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const name  = this.querySelector('input[type="text"]').value.trim();
+    const email = this.querySelector('input[type="email"]').value.trim();
+    if (!name || !email) {
+      submitBtn.textContent = 'Please fill in Name & Email';
+      submitBtn.style.background = 'rgba(201,169,110,0.3)';
+      setTimeout(() => {
+        submitBtn.textContent = 'Send Enquiry — We\'ll Respond Within 48 Hours';
+        submitBtn.style.background = '';
+      }, 2500);
+      return;
+    }
+
+    submitBtn.textContent = 'Sending…';
+    submitBtn.disabled = true;
+
+    setTimeout(() => {
+      submitBtn.textContent = '✓ Enquiry Received — We\'ll Be In Touch Within 48 Hours';
+      submitBtn.style.background = 'linear-gradient(135deg, #4a7c4e, #2d5c32)';
+      submitBtn.style.color = '#fff';
+      contactForm.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+
+      setTimeout(() => {
+        submitBtn.textContent = 'Send Enquiry — We\'ll Respond Within 48 Hours';
+        submitBtn.style.background = '';
+        submitBtn.style.color = '';
+        submitBtn.disabled = false;
+      }, 5000);
+    }, 1200);
+  });
+}
+
+// ── Smooth scroll on reduced-motion ───────────────────────────────────────────
+if (prefersReduced) {
+  document.documentElement.style.scrollBehavior = 'auto';
+}
+</script>
+</body>
+</html>
